@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evenlode Landscape Recovery</title>
+  <meta name="description" content="Interactive map of the Evenlode Landscape Recovery project area across the Evenlode, Glyme and Dorn catchments.">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/OrdnanceSurvey/os-api-branding@0.3.1/os-api-branding.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map" role="region" aria-label="Map of the Evenlode Landscape Recovery project area"></div>
+
+  <aside id="panel" class="panel">
+    <header class="panel-head">
+      <div>
+        <h1>Evenlode Landscape Recovery</h1>
+        <p class="poc">Proof of concept: dummy project geometry</p>
+      </div>
+      <button id="panel-toggle" class="panel-toggle" aria-expanded="true" aria-controls="panel-body" title="Show or hide the panel">
+        <span aria-hidden="true">&#8722;</span>
+      </button>
+    </header>
+
+    <div id="panel-body" class="panel-body">
+      <section class="total">
+        <div class="total-label">Total project area</div>
+        <div class="total-value"><span id="total-ha">&hellip;</span> ha</div>
+        <div class="total-sub" id="total-km2"></div>
+        <table class="breakdown" id="breakdown" aria-label="Project area by catchment"></table>
+      </section>
+
+      <section>
+        <h2>Layers</h2>
+        <label class="layer">
+          <input type="checkbox" data-layer="project" checked>
+          <span class="swatch swatch-project" aria-hidden="true"></span> Project area
+        </label>
+        <label class="layer">
+          <input type="checkbox" data-layer="catchments" checked>
+          <span class="swatch swatch-catchments" aria-hidden="true"></span> Catchments
+        </label>
+        <label class="layer">
+          <input type="checkbox" data-layer="rivers" checked>
+          <span class="swatch swatch-rivers" aria-hidden="true"></span> Rivers
+        </label>
+      </section>
+
+      <section>
+        <h2>Basemap</h2>
+        <label class="layer"><input type="radio" name="basemap" value="os-light" checked> OS Light</label>
+        <label class="layer"><input type="radio" name="basemap" value="os-outdoor"> OS Outdoor</label>
+        <label class="layer"><input type="radio" name="basemap" value="os-raster"> OS Outdoor (raster, for comparison)</label>
+        <label class="layer"><input type="radio" name="basemap" value="satellite"> Satellite</label>
+      </section>
+    </div>
+  </aside>
+
+  <noscript><p class="noscript">This map needs JavaScript.</p></noscript>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="config.js"></script>
+  <script src="map.js"></script>
+</body>
+</html>
