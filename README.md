@@ -22,11 +22,9 @@ GeoJSON files) served by GitHub Pages, with no build step and no server. It cost
   [OS-Vector-Tile-API-Stylesheets](https://github.com/OrdnanceSurvey/OS-Vector-Tile-API-Stylesheets)
   pinned to one commit. The free plan serves tiles to zoom 15, and OS's styles show them to
   just under 16, so OS basemaps stop at 15.95. Closer than that, OS draws only premium data.
-- **OS Outdoor (raster)**: OS Maps API, OpenData plan, for comparison.
 - **Satellite**: Esri World Imagery.
 
-The OS key belongs to the OS Data Hub project "ELR web map" (OS Vector Tile API + OS Maps
-API). It is public by design, and on the OpenData plan it cannot run up a bill.
+The OS key belongs to the OS Data Hub project "ELR web map" (OS Vector Tile API). It is public by design, and on the OpenData plan it cannot run up a bill.
 
 ## Updating the project area
 

@@ -70,12 +70,6 @@
     let style;
     if (name === "os-light") style = await osVectorStyle("Light");
     else if (name === "os-outdoor") style = await osVectorStyle("Outdoor");
-    else if (name === "os-raster")
-      style = rasterStyle(
-        "https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{z}/{x}/{y}.png",
-        cfg.osRasterMaxZoom,
-        OS_ATTRIBUTION
-      );
     else style = rasterStyle(cfg.satellite.tiles, cfg.satellite.maxzoom, cfg.satellite.attribution);
     styleCache[name] = style;
     return structuredClone(style);
@@ -177,7 +171,9 @@
       toggle.setAttribute("aria-expanded", String(!c));
       toggle.firstElementChild.innerHTML = c ? "&#43;" : "&#8722;";
     };
-    toggle.addEventListener("click", () => setCollapsed(!panel.classList.contains("collapsed")));
+    // The whole header folds the panel; the button inside it keeps it keyboard-accessible
+    // (its click bubbles up here, so it toggles once).
+    panel.querySelector(".panel-head").addEventListener("click", () => setCollapsed(!panel.classList.contains("collapsed")));
     if (window.matchMedia("(max-width: 600px)").matches) setCollapsed(true);
 
     document.querySelectorAll("input[data-layer]").forEach((input) => {
