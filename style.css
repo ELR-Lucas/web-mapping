@@ -5,7 +5,10 @@
   --line: #dfe5e1;
   --project: #2f7d32;
   --project-fill: rgba(47, 125, 50, 0.28);
-  --catchment: #6a3d9a;
+  /* Catchment colours: keep in step with CATCHMENTS in map.js. */
+  --evenlode: #6a3d9a;
+  --glyme: #d95f02;
+  --dorn: #c2185b;
   --river: #1f78c8;
   --accent: #b5651d;
 }
@@ -101,7 +104,10 @@ h2 {
 
 .swatch { display: inline-block; width: 22px; height: 14px; flex: none; }
 .swatch-project { background: var(--project-fill); border: 2px solid var(--project); }
-.swatch-catchments { border: 2px dashed var(--catchment); }
+.swatch-catchment { border: 2px dashed; }
+.swatch-evenlode { border-color: var(--evenlode); }
+.swatch-glyme { border-color: var(--glyme); }
+.swatch-dorn { border-color: var(--dorn); }
 .swatch-rivers { height: 0; border-top: 3px solid var(--river); }
 
 .maplibregl-popup-content { font: 13px/1.4 "Source Sans Pro", "Segoe UI", system-ui, sans-serif; padding: 8px 12px; }

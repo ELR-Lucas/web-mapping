@@ -15,13 +15,21 @@
   const COLOURS = {
     project: "#2f7d32",
     projectOnImagery: "#ffe14d",
-    catchment: "#6a3d9a",
-    catchmentOnImagery: "#ffffff",
     river: "#1f78c8",
     riverOnImagery: "#7fd3ff",
   };
 
-  const visible = { project: true, catchments: true, rivers: true };
+  // One layer per catchment, each with its own colour (map, satellite). Keys match the
+  // `name` property in data/catchments.geojson and the data-layer switches in index.html.
+  const CATCHMENTS = {
+    Evenlode: { colour: "#6a3d9a", onImagery: "#e0c8ff" },
+    Glyme: { colour: "#d95f02", onImagery: "#ffb870" },
+    Dorn: { colour: "#c2185b", onImagery: "#ff8fc0" },
+  };
+  const catchmentKey = (name) => `catchment-${name.toLowerCase()}`;
+
+  const visible = { project: true, rivers: true };
+  Object.keys(CATCHMENTS).forEach((name) => (visible[catchmentKey(name)] = true));
   let basemap = "os-light";
   let data = null;
 
@@ -84,12 +92,17 @@
     map.addSource("rivers", { type: "geojson", data: data.rivers, attribution: RIVERS_ATTRIBUTION });
     map.addSource("project", { type: "geojson", data: data.project });
 
+    const names = Object.keys(CATCHMENTS);
+    const only = (name) => ["==", ["get", "name"], name];
+
     // Invisible fill so a click anywhere in a catchment opens its popup.
-    map.addLayer({
-      id: "catchments-hit", type: "fill", source: "catchments",
-      layout: { visibility: vis("catchments") },
-      paint: { "fill-color": "#000", "fill-opacity": 0 },
-    });
+    names.forEach((name) =>
+      map.addLayer({
+        id: `${catchmentKey(name)}-hit`, type: "fill", source: "catchments", filter: only(name),
+        layout: { visibility: vis(catchmentKey(name)) },
+        paint: { "fill-color": "#000", "fill-opacity": 0 },
+      })
+    );
     map.addLayer({
       id: "project-fill", type: "fill", source: "project",
       layout: { visibility: vis("project") },
@@ -106,15 +119,17 @@
         "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1, 13, 2, 16, 3.5],
       },
     });
-    map.addLayer({
-      id: "catchments-line", type: "line", source: "catchments",
-      layout: { visibility: vis("catchments"), "line-join": "round" },
-      paint: {
-        "line-color": onImagery ? COLOURS.catchmentOnImagery : COLOURS.catchment,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.5, 14, 3],
-        "line-dasharray": [3, 2],
-      },
-    });
+    names.forEach((name) =>
+      map.addLayer({
+        id: `${catchmentKey(name)}-line`, type: "line", source: "catchments", filter: only(name),
+        layout: { visibility: vis(catchmentKey(name)), "line-join": "round" },
+        paint: {
+          "line-color": onImagery ? CATCHMENTS[name].onImagery : CATCHMENTS[name].colour,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.5, 14, 3],
+          "line-dasharray": [3, 2],
+        },
+      })
+    );
     map.addLayer({
       id: "project-line", type: "line", source: "project",
       layout: { visibility: vis("project"), "line-join": "round" },
@@ -123,30 +138,36 @@
         "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.5, 14, 3],
       },
     });
-    map.addLayer({
-      id: "catchments-label", type: "symbol", source: "catchments",
-      maxzoom: 13,
-      layout: {
-        visibility: vis("catchments"),
-        "text-field": ["get", "name"],
-        "text-font": LABEL_FONT,
-        "text-size": 15,
-        "text-letter-spacing": 0.08,
-        "text-transform": "uppercase",
-      },
-      paint: {
-        "text-color": onImagery ? "#ffffff" : COLOURS.catchment,
-        "text-halo-color": onImagery ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.9)",
-        "text-halo-width": 1.5,
-      },
-    });
+    names.forEach((name) =>
+      map.addLayer({
+        id: `${catchmentKey(name)}-label`, type: "symbol", source: "catchments", filter: only(name),
+        maxzoom: 13,
+        layout: {
+          visibility: vis(catchmentKey(name)),
+          "text-field": ["get", "name"],
+          "text-font": LABEL_FONT,
+          "text-size": 15,
+          "text-letter-spacing": 0.08,
+          "text-transform": "uppercase",
+        },
+        paint: {
+          "text-color": onImagery ? "#ffffff" : CATCHMENTS[name].colour,
+          "text-halo-color": onImagery ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.9)",
+          "text-halo-width": 1.5,
+        },
+      })
+    );
   }
 
   const LAYERS = {
     project: ["project-fill", "project-line"],
-    catchments: ["catchments-hit", "catchments-line", "catchments-label"],
     rivers: ["rivers"],
   };
+  Object.keys(CATCHMENTS).forEach((name) => {
+    const k = catchmentKey(name);
+    LAYERS[k] = [`${k}-hit`, `${k}-line`, `${k}-label`];
+  });
+  const CATCHMENT_HIT_LAYERS = Object.keys(CATCHMENTS).map((name) => `${catchmentKey(name)}-hit`);
 
   // --- Panel ----------------------------------------------------------------------------
   const fmt = (n, d = 0) => n.toLocaleString("en-GB", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -204,17 +225,17 @@
   function wirePopups() {
     const popup = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" });
     map.on("click", (e) => {
-      const ids = ["project-fill", "catchments-hit"].filter((id) => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
+      const ids = ["project-fill", ...CATCHMENT_HIT_LAYERS].filter((id) => map.getLayer(id) && map.getLayoutProperty(id, "visibility") !== "none");
       const hits = map.queryRenderedFeatures(e.point, { layers: ids });
       if (!hits.length) return;
       const lines = [];
       const project = hits.find((h) => h.layer.id === "project-fill");
-      const catchment = hits.find((h) => h.layer.id === "catchments-hit");
+      const catchment = hits.find((h) => CATCHMENT_HIT_LAYERS.includes(h.layer.id));
       if (catchment) lines.push(`<strong>${catchment.properties.name} catchment</strong>${fmt(catchment.properties.area_ha)} ha`);
       if (project) lines.push(`<strong>Inside the project area</strong>`);
       popup.setLngLat(e.lngLat).setHTML(lines.join("<br>")).addTo(map);
     });
-    ["project-fill", "catchments-hit"].forEach((id) => {
+    ["project-fill", ...CATCHMENT_HIT_LAYERS].forEach((id) => {
       map.on("mouseenter", id, () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", id, () => (map.getCanvas().style.cursor = ""));
     });
