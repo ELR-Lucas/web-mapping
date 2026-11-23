@@ -12,6 +12,9 @@
   // The project boundary is not open data: say so wherever it is shown.
   const PROJECT_ATTRIBUTION =
     "Project boundary &copy; North East Cotswold Farmer Cluster CIC, not licensed for reuse";
+  // Absolute URL, so it works wherever the page is served from (GitHub Pages, Wix iframe).
+  const PROJECT_TILES = new URL("data/project_area.pmtiles", document.baseURI).href;
+  const PROJECT_LAYER = "project_area"; // PROJECT_LAYER in scripts/build_data.py
   const OS_GLYPHS = "https://api.os.uk/maps/vector/v1/vts/resources/fonts/{fontstack}/{range}.pbf";
   const LABEL_FONT = ["Source Sans Pro Semibold"];
 
@@ -93,7 +96,9 @@
 
     map.addSource("catchments", { type: "geojson", data: data.catchments, attribution: EA_ATTRIBUTION });
     map.addSource("rivers", { type: "geojson", data: data.rivers, attribution: RIVERS_ATTRIBUTION });
-    map.addSource("project", { type: "geojson", data: data.project, attribution: PROJECT_ATTRIBUTION });
+    // The project boundary is vector tiles (data/project_area.pmtiles), read through the
+    // pmtiles protocol registered in start(). Its figures come from data/stats.json.
+    map.addSource("project", { type: "vector", url: `pmtiles://${PROJECT_TILES}`, attribution: PROJECT_ATTRIBUTION });
 
     const names = Object.keys(CATCHMENTS);
     const only = (name) => ["==", ["get", "name"], name];
@@ -107,7 +112,7 @@
       })
     );
     map.addLayer({
-      id: "project-fill", type: "fill", source: "project",
+      id: "project-fill", type: "fill", source: "project", "source-layer": PROJECT_LAYER,
       layout: { visibility: vis("project") },
       paint: {
         "fill-color": onImagery ? COLOURS.projectOnImagery : COLOURS.project,
@@ -134,7 +139,7 @@
       })
     );
     map.addLayer({
-      id: "project-line", type: "line", source: "project",
+      id: "project-line", type: "line", source: "project", "source-layer": PROJECT_LAYER,
       layout: { visibility: vis("project"), "line-join": "round" },
       paint: {
         "line-color": onImagery ? COLOURS.projectOnImagery : COLOURS.project,
@@ -176,7 +181,7 @@
   const fmt = (n, d = 0) => n.toLocaleString("en-GB", { minimumFractionDigits: d, maximumFractionDigits: d });
 
   function fillPanel() {
-    const p = data.project.features[0].properties;
+    const p = data.stats.project;
     document.getElementById("total-ha").textContent = fmt(p.area_ha);
     document.getElementById("total-km2").textContent = `${fmt(p.area_ha / 100, 1)} km² · ${fmt(p.area_ha * 2.47105)} acres`;
     const rows = data.catchments.features
@@ -248,13 +253,15 @@
   let map;
 
   async function start() {
-    const [catchments, rivers, project, style] = await Promise.all([
+    maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
+
+    const [catchments, rivers, stats, style] = await Promise.all([
       fetch("data/catchments.geojson").then((r) => r.json()),
       fetch("data/rivers.geojson").then((r) => r.json()),
-      fetch("data/project_area.geojson").then((r) => r.json()),
+      fetch("data/stats.json").then((r) => r.json()),
       getStyle(basemap),
     ]);
-    data = { catchments, rivers, project };
+    data = { catchments, rivers, stats };
 
     // Frame the three catchments.
     let minX = 180, minY = 90, maxX = -180, maxY = -90;

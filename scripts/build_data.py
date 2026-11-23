@@ -1,11 +1,13 @@
 """Build the map's web data from the downloaded sources.
 
 Reads data/source/ (not in git; see data/SOURCES.md for how to fetch it) and writes
-data/catchments.geojson and data/rivers.geojson in WGS84 for the web map.
+data/catchments.geojson and data/rivers.geojson in WGS84, the project boundary as
+vector tiles in data/project_area.pmtiles, and its figures in data/stats.json.
 
 Areas are computed here, once, in British National Grid (EPSG:27700), from the
 geometry itself, and written into the files so the page only displays them.
 """
+import json
 from pathlib import Path
 
 import geopandas as gpd
@@ -93,11 +95,11 @@ def build_rivers(catchments: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return rivers
 
 
-def build_project_area(catchments: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def build_project_area(catchments: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, dict]:
     """Dissolve the project geometries into one outline and measure it.
 
-    The area of the dissolved outline (not the sum of the parts, so overlaps are not
-    counted twice) and its split by catchment are written onto the single feature.
+    Returns the outline and its figures: the area of the dissolved outline (not the
+    sum of the parts, so overlaps are not counted twice) and its split by catchment.
     """
     g = gpd.read_file(SRC / "project_area" / "project_area.gpkg").to_crs(BNG)
     outline = polygons_only(g.geometry.make_valid().union_all())
@@ -111,14 +113,41 @@ def build_project_area(catchments: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         inside += ha
     props["area_ha_outside"] = round(props["area_ha"] - inside, 1)
     print("project area:", props)
-    return gpd.GeoDataFrame([{**props, "geometry": outline}], crs=BNG)
+    return gpd.GeoDataFrame([{"name": props["name"], "geometry": outline}], crs=BNG), props
+
+
+# The project boundary is published as vector tiles (one PMTiles file), not as a GeoJSON
+# file, so there is no single file of it to save and open. Tiles are cut to PROJECT_MAX_ZOOM;
+# the map enlarges that level beyond it. What a copy is worth is set by SIMPLIFY_M, not by
+# the tiles: at zoom 13 the tile grid is under 1 m here.
+PROJECT_LAYER = "project_area"
+PROJECT_MIN_ZOOM, PROJECT_MAX_ZOOM = 6, 13
+
+
+def write_project_tiles(outline: gpd.GeoDataFrame) -> None:
+    path = OUT / "project_area.pmtiles"
+    path.unlink(missing_ok=True)  # GDAL will not overwrite an existing tileset
+    outline.to_crs(3857).to_file(
+        path, driver="PMTiles", layer=PROJECT_LAYER,
+        MINZOOM=PROJECT_MIN_ZOOM, MAXZOOM=PROJECT_MAX_ZOOM, NAME="ELR project area",
+    )
+    print(f"{path.name}: zooms {PROJECT_MIN_ZOOM}-{PROJECT_MAX_ZOOM}, {path.stat().st_size / 1024:.0f} KB")
+
+
+def write_stats(props: dict) -> None:
+    """The panel's figures, with no geometry."""
+    path = OUT / "stats.json"
+    path.write_text(json.dumps({"project": props}, indent=2) + "\n", encoding="utf-8")
+    print(f"{path.name}: written")
 
 
 def main() -> None:
     catchments = build_catchments()
     write_geojson(catchments, "catchments.geojson")
     write_geojson(build_rivers(catchments), "rivers.geojson")
-    write_geojson(build_project_area(catchments), "project_area.geojson")
+    outline, props = build_project_area(catchments)
+    write_project_tiles(outline)
+    write_stats(props)
 
 
 if __name__ == "__main__":
