@@ -9,6 +9,9 @@
   const EA_ATTRIBUTION =
     'Catchments: &copy; Environment Agency copyright and/or database right 2026, ' +
     '<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">OGL v3.0</a>';
+  // The project boundary is not open data: say so wherever it is shown.
+  const PROJECT_ATTRIBUTION =
+    "Project boundary &copy; North East Cotswold Farmer Cluster CIC, not licensed for reuse";
   const OS_GLYPHS = "https://api.os.uk/maps/vector/v1/vts/resources/fonts/{fontstack}/{range}.pbf";
   const LABEL_FONT = ["Source Sans Pro Semibold"];
 
@@ -90,7 +93,7 @@
 
     map.addSource("catchments", { type: "geojson", data: data.catchments, attribution: EA_ATTRIBUTION });
     map.addSource("rivers", { type: "geojson", data: data.rivers, attribution: RIVERS_ATTRIBUTION });
-    map.addSource("project", { type: "geojson", data: data.project });
+    map.addSource("project", { type: "geojson", data: data.project, attribution: PROJECT_ATTRIBUTION });
 
     const names = Object.keys(CATCHMENTS);
     const only = (name) => ["==", ["get", "name"], name];
@@ -277,7 +280,6 @@
       pitchWithRotate: false,
     });
     map.touchZoomRotate.disableRotation();
-    window.elrMap = map; // for debugging from the browser console
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.FullscreenControl(), "top-right");
